@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>המשחק של ליאן בקל - מבוך הפיראטים</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Rubik',sans-serif;background:#0d1b0d;
+user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+
+/* ===================== SCREENS ===================== */
+.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200;padding:16px}
+.scr.on{display:flex}
+
+/* ===================== START SCREEN ===================== */
+#startScr{
+  background:linear-gradient(160deg,#071207 0%,#0d2b0d 35%,#1a4a1a 70%,#0d2b0d 100%);
+  color:#fff;gap:14px;text-align:center;overflow:hidden;
+}
+/* Animated bg particles */
+#startScr::before,#startScr::after{content:'';position:absolute;border-radius:50%;opacity:.06;pointer-events:none}
+#startScr::before{width:400px;height:400px;background:#fbbf24;top:-100px;left:-100px;animation:orb1 20s ease-in-out infinite}
+#startScr::after{width:300px;height:300px;background:#22c55e;bottom:-80px;right:-80px;animation:orb2 15s ease-in-out infinite}
+@keyframes orb1{0%,100%{transform:translate(0)}50%{transform:translate(80px,60px)}}
+@keyframes orb2{0%,100%{transform:translate(0)}50%{transform:translate(-60px,-40px)}}
+
+.logo{font-size:3.2rem;position:relative;z-index:2;animation:bob 2.5s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.ttl{font-size:2rem;font-weight:900;
+  background:linear-gradient(135deg,#fbbf24,#f59e0b,#ea580c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 3px 10px rgba(251,191,36,.3));position:relative;z-index:2}
+.sub{font-size:1rem;color:rgba(255,255,255,.65);position:relative;z-index:2}
+.dsc{font-size:.78rem;color:rgba(255,255,255,.4);max-width:360px;line-height:1.5;position:relative;z-index:2}
+
+/* Char grid */
+.chs{position:relative;z-index:2;width:100%;max-width:440px}.chs>p{color:rgba(255,255,255,.55);font-size:.85rem;margin-bottom:8px}
+.cg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%}
+.cp{display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);border-radius:14px;
+  padding:10px 4px;cursor:pointer;transition:all .25s;color:rgba(255,255,255,.55);
+  font-size:.65rem;font-weight:700;font-family:'Rubik',sans-serif}
+.cp:hover,.cp.sl{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.45);color:#fff;transform:translateY(-2px);box-shadow:0 4px 15px rgba(251,191,36,.15)}
+.cp .em{font-size:2rem;line-height:1}
+
+.btn{padding:14px 42px;font-size:1.15rem;font-weight:700;font-family:'Rubik',sans-serif;
+  border:none;border-radius:50px;cursor:pointer;transition:all .25s;position:relative;z-index:2;letter-spacing:.5px}
+.btn:hover{transform:translateY(-2px)}
+.b1{background:linear-gradient(135deg,#fbbf24,#d97706);color:#1a1a1a;box-shadow:0 6px 22px rgba(251,191,36,.25)}
+.b2{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;box-shadow:0 6px 18px rgba(239,68,68,.2)}
+.b3{background:linear-gradient(135deg,#fbbf24,#d97706);color:#1a1a1a;box-shadow:0 6px 18px rgba(251,191,36,.2)}
+
+/* ===================== GAME ===================== */
+#gameArea{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#0d1b0d,#132613,#1a3a1a);z-index:10;flex-direction:column}
+#gameArea.on{display:flex}
+canvas{border-radius:8px;box-shadow:0 0 40px rgba(34,197,94,.08),0 4px 20px rgba(0,0,0,.4)}
+
+/* HUD */
+.hud{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:8px 14px;background:linear-gradient(180deg,rgba(0,0,0,.75) 0%,rgba(0,0,0,.2) 80%,transparent 100%);
+  color:#fff;font-size:.78rem;font-weight:700;pointer-events:none}
+.hud span{pointer-events:auto}
+.badge{background:rgba(251,191,36,.15);padding:3px 10px;border-radius:12px;border:1px solid rgba(251,191,36,.2)}
+
+/* D-Pad */
+.dpad{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:120;
+  display:grid;grid-template-areas:"_ u _" "l _ r" "_ d _";
+  grid-template-columns:52px 20px 52px;grid-template-rows:52px 10px 52px;gap:0}
+.dpad .d{border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;cursor:pointer;
+  background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.12);
+  transition:background .1s;-webkit-tap-highlight-color:transparent}
+.dpad .d:active{background:rgba(251,191,36,.3)}
+.dpad .du{grid-area:u}.dpad .dd{grid-area:d}.dpad .dl{grid-area:l}.dpad .dr{grid-area:r}
+
+/* Level overlay */
+.lovr{position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}
+.lovr.on{display:flex}
+.ltxt{font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,.4);animation:pop .45s ease}
+@keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* ===================== FAIL ===================== */
+#failScr{background:linear-gradient(135deg,#1a0a0a,#7f1d1d,#991b1b);color:#fff;gap:12px;text-align:center}
+.ficon{font-size:3.8rem;animation:fshk .5s ease}
+@keyframes fshk{0%,100%{transform:rotate(0)}20%{transform:rotate(-8deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-4deg)}80%{transform:rotate(4deg)}}
+.fttl{font-size:2rem;font-weight:900;text-shadow:2px 2px 6px rgba(0,0,0,.5)}
+.finf{font-size:.9rem;opacity:.8}.fscr{font-size:1.2rem;font-weight:700;color:#fbbf24}
+
+/* ===================== WIN ===================== */
+#winScr{color:#fff;gap:12px;text-align:center;overflow:hidden}
+.wicon{font-size:3.8rem;animation:tspin 2.5s ease-in-out infinite;position:relative;z-index:5}
+@keyframes tspin{0%{transform:scale(1) rotate(0)}25%{transform:scale(1.1) rotate(-6deg)}50%{transform:scale(1) rotate(0)}75%{transform:scale(1.1) rotate(6deg)}100%{transform:scale(1) rotate(0)}}
+.wttl{font-size:2.2rem;font-weight:900;
+  background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;filter:drop-shadow(0 3px 8px rgba(255,215,0,.3));position:relative;z-index:5}
+.wsub{font-size:.95rem;opacity:.9;position:relative;z-index:5}
+.wscr{font-size:1.4rem;font-weight:900;color:#ffd700;text-shadow:0 0 10px rgba(255,215,0,.3);position:relative;z-index:5}
+.conf{position:fixed;z-index:3;border-radius:2px;animation:cfl linear forwards;pointer-events:none}
+@keyframes cfl{0%{transform:translateY(-10vh) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+/* Responsive */
+@media(max-width:600px){
+  .ttl{font-size:1.6rem}.sub{font-size:.9rem}.dsc{font-size:.7rem}.logo{font-size:2.8rem}
+  .btn{padding:12px 34px;font-size:1rem}
+  .chs{max-width:340px}
+  .cg{gap:6px}
+  .cp{padding:8px 3px;border-radius:12px;font-size:.6rem}
+  .cp .em{font-size:1.7rem}
+  .hud{font-size:.7rem;padding:6px 8px}
+  .fttl,.wttl{font-size:1.6rem}.ficon,.wicon{font-size:3rem}
+  .ltxt{font-size:1.5rem}
+  .dpad{grid-template-columns:48px 16px 48px;grid-template-rows:48px 8px 48px}
+  .dpad .d{width:48px;height:48px;font-size:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== START ========== -->
+<div id="startScr" class="scr on">
+  <div class="logo">🏴‍☠️</div>
+  <h1 class="ttl">המשחק של ליאן בקל</h1>
+  <p class="sub">🌿 מבוך הפיראטים 🗡️</p>
+  <p class="dsc">ברחו דרך מבוך הגנים מהפיראטים והגיעו לאוצר!<br>חצים / סוואיפ / כפתורים = תנועה</p>
+  <div class="chs"><p>בחר/י דמות:</p><div class="cg" id="cg"></div></div>
+  <button class="btn b1" onclick="go()">🗡️ !לצאת להרפתקה</button>
+</div>
+
+<!-- ========== GAME ========== -->
+<div id="gameArea">
+  <canvas id="cv"></canvas>
+  <div class="hud"><span class="badge" id="hlv">שלב 1/10</span><span id="htm">⏱ 0:00</span></div>
+</div>
+
+<div class="dpad" id="dp" style="display:none">
+  <div class="d du" data-d="up">⬆️</div>
+  <div class="d dd" data-d="down">⬇️</div>
+  <div class="d dl" data-d="left">⬅️</div>
+  <div class="d dr" data-d="right">➡️</div>
+</div>
+
+<div class="lovr" id="lovr"><div class="ltxt" id="ltxt"></div></div>
+
+<!-- ========== FAIL ========== -->
+<div id="failScr" class="scr">
+  <div class="ficon">☠️</div>
+  <h2 class="fttl">!נתפסת</h2>
+  <p class="finf" id="fi"></p><p class="fscr" id="fs"></p>
+  <button class="btn b2" id="fb" onclick="back()">🔄 שחק שוב</button>
+</div>
+
+<!-- ========== WIN ========== -->
+<div id="winScr" class="scr">
+  <div class="wicon">🏆</div>
+  <h2 class="wttl">!ניצחת</h2>
+  <p class="wsub" id="ws"></p><p class="wscr" id="wc"></p>
+  <button class="btn b3" id="wb" onclick="back()">🔄 שחק שוב</button>
+</div>
+
+<script>
+/* ================ CHARACTERS ================ */
+const C=[
+{k:'brother',e:'👦',l:'אח',f:0},{k:'sister',e:'👧',l:'אחות',f:1},
+{k:'mom',e:'👩',l:'אמא',f:1},{k:'dad',e:'👨',l:'אבא',f:0},
+{k:'grandpa',e:'👴',l:'סבא',f:0},{k:'grandma',e:'👵',l:'סבתא',f:1},
+{k:'uncle',e:'👨‍🦱',l:'דוד',f:0},{k:'aunt',e:'👩‍🦱',l:'דודה',f:1},
+{k:'cousin_m',e:'🧑',l:'בן דוד',f:0},{k:'cousin_f',e:'👩‍🦰',l:'בת דודה',f:1},
+{k:'friend_m',e:'🧒',l:'חבר',f:0},{k:'friend_f',e:'👱‍♀️',l:'חברה',f:1},
+];
+let me=C[0];
+const cg=document.getElementById('cg');
+C.forEach((c,i)=>{const b=document.createElement('button');b.className='cp'+(i?'':' sl');
+b.innerHTML=`<span class="em">${c.e}</span><span>${c.l}</span>`;
+b.onclick=()=>{cg.querySelectorAll('.cp').forEach(x=>x.classList.remove('sl'));b.classList.add('sl');me=c;};
+cg.appendChild(b);});
+
+/* ================ CANVAS ================ */
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+const TL=10;
+const mob='ontouchstart'in window||navigator.maxTouchPoints>0;
+
+/* ================ LEVEL CONFIG ================ */
+function cfg(l){
+  // Large mazes with LOTS of extra openings = easy to escape
+  const sz=[10,11,12,13,14,14,15,15,16,17];
+  const open=[20,22,25,28,30,32,35,38,40,42]; // extra wall removals!
+  const en=l<=3?1:l<=6?2:l<=8?3:4;
+  const spd=l<=2?1200:l<=4?1000:l<=6?800:l<=8?650:500;
+  return{c:sz[l-1],r:sz[l-1],en,spd,op:open[l-1]};
+}
+
+/* ================ MAZE GEN (DFS + extra openings) ================ */
+function genM(cols,rows,extra){
+  const g=[];
+  for(let r=0;r<rows;r++){g[r]=[];for(let c=0;c<cols;c++)g[r][c]={t:1,r:1,b:1,l:1,v:0};}
+  const stk=[];let cur={r:0,c:0};g[0][0].v=1;stk.push(cur);
+  function nb(r,c){const n=[];
+    if(r>0&&!g[r-1][c].v)n.push({r:r-1,c,d:'t'});
+    if(c<cols-1&&!g[r][c+1].v)n.push({r,c:c+1,d:'r'});
+    if(r<rows-1&&!g[r+1][c].v)n.push({r:r+1,c,d:'b'});
+    if(c>0&&!g[r][c-1].v)n.push({r,c:c-1,d:'l'});return n;}
+  while(stk.length){const ns=nb(cur.r,cur.c);
+    if(ns.length){const nx=ns[Math.floor(Math.random()*ns.length)];
+      const od={t:'b',b:'t',l:'r',r:'l'};
+      g[cur.r][cur.c][nx.d]=0;g[nx.r][nx.c][od[nx.d]]=0;
+      g[nx.r][nx.c].v=1;stk.push(cur);cur=nx;}
+    else cur=stk.pop();}
+
+  // Remove LOTS of extra walls — creates many escape routes
+  for(let i=0;i<extra;i++){
+    const r=1+Math.floor(Math.random()*(rows-2));
+    const c=1+Math.floor(Math.random()*(cols-2));
+    const d=Math.floor(Math.random()*4);
+    const pairs=[['t','b',-1,0],['b','t',1,0],['l','r',0,-1],['r','l',0,1]];
+    const[w,ow,dr,dc]=pairs[d];
+    const nr=r+dr,nc=c+dc;
+    if(nr>=0&&nr<rows&&nc>=0&&nc<cols){g[r][c][w]=0;g[nr][nc][ow]=0;}
+  }
+  return g;
+}
+
+/* ================ BFS ================ */
+function bfs(mz,sr,sc,gr,gc,cols,rows){
+  const vis=Array.from({length:rows},()=>Array(cols).fill(0));
+  const q=[{r:sr,c:sc,p:[]}];vis[sr][sc]=1;
+  while(q.length){const{r,c,p}=q.shift();
+    if(r===gr&&c===gc)return p;
+    const cell=mz[r][c];
+    const ds=[{dr:-1,dc:0,w:'t'},{dr:0,dc:1,w:'r'},{dr:1,dc:0,w:'b'},{dr:0,dc:-1,w:'l'}];
+    for(const d of ds){const nr=r+d.dr,nc=c+d.dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&!vis[nr][nc]&&!cell[d.w]){
+        vis[nr][nc]=1;q.push({r:nr,c:nc,p:[...p,{r:nr,c:nc}]});}}}
+  return[];
+}
+
+/* ================ STATE ================ */
+let st='start',lv=1,mz=null,cs=0;
+let pl={r:0,c:0,ax:0,ay:0};
+let ens=[],exR=0,exC=0,eT=[],t0=0,el=0,tR=null;
+let mq=[],ani=false,deco=[];
+
+/* ================ PIRATE EMOJIS ================ */
+const PIRATES=['🏴‍☠️','☠️','🦜','🗡️'];
+
+/* ================ SCREENS ================ */
+function show(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  const ga=document.getElementById('gameArea');
+  const dp=document.getElementById('dp');
+  if(id){document.getElementById(id).classList.add('on');ga.classList.remove('on');dp.style.display='none';}
+  else{ga.classList.add('on');dp.style.display=mob?'grid':'none';}
+}
+
+function showLvl(){
+  const o=document.getElementById('lovr'),t=document.getElementById('ltxt');
+  t.textContent=`🏴‍☠️ שלב ${lv}`;o.classList.add('on');
+  setTimeout(()=>o.classList.remove('on'),1100);
+}
+
+/* ================ SIZING ================ */
+function szCV(){
+  const cf=cfg(lv);
+  const pad=mob?130:30;
+  const mxW=window.innerWidth-12,mxH=window.innerHeight-50-pad;
+  cs=Math.floor(Math.min(mxW/cf.c,mxH/cf.r));
+  cv.width=cs*cf.c;cv.height=cs*cf.r;
+}
+
+/* ================ DECORATIONS ================ */
+function genDeco(){
+  const cf=cfg(lv);deco=[];
+  const fl=['🌸','🌺','🌻','🌷','🌼','🍀','🌿','🍃','🌱','🪻'];
+  for(let r=0;r<cf.r;r++)for(let c=0;c<cf.c;c++)
+    if(Math.random()<0.12)deco.push({r,c,e:fl[Math.floor(Math.random()*fl.length)],ox:.15+Math.random()*.7,oy:.15+Math.random()*.7});
+}
+
+/* ================ INIT LEVEL ================ */
+function initLv(){
+  const cf=cfg(lv);szCV();
+  mz=genM(cf.c,cf.r,cf.op);
+  pl={r:0,c:0,ax:0,ay:0};
+  exR=cf.r-1;exC=cf.c-1;
+
+  // Place enemies FAR from player
+  ens=[];
+  const pos=[];
+  for(let r=0;r<cf.r;r++)for(let c=0;c<cf.c;c++){
+    const dist=r+c;
+    if(dist>=Math.floor((cf.r+cf.c)*0.5))pos.push({r,c,dist});}
+  pos.sort((a,b)=>b.dist-a.dist);
+  for(let i=0;i<cf.en&&i<pos.length;i++)
+    ens.push({r:pos[i].r,c:pos[i].c,ax:pos[i].c*cs,ay:pos[i].r*cs,pi:PIRATES[i%PIRATES.length]});
+
+  // Enemy timers
+  eT.forEach(t=>clearInterval(t));eT=[];
+  ens.forEach(en=>{
+    eT.push(setInterval(()=>{
+      if(st!=='play')return;
+      const path=bfs(mz,en.r,en.c,pl.r,pl.c,cf.c,cf.r);
+      if(path.length>1){ // Only move one step toward player
+        const next=path[0];en.r=next.r;en.c=next.c;
+        const tx=en.c*cs,ty=en.r*cs,sx=en.ax,sy=en.ay;let s0=null;
+        (function step(ts){if(!s0)s0=ts;const p=Math.min((ts-s0)/130,1);
+          en.ax=sx+(tx-sx)*p;en.ay=sy+(ty-sy)*p;
+          if(p<1)requestAnimationFrame(step);})(performance.now());
+        // Check collision after move
+        setTimeout(()=>{if(en.r===pl.r&&en.c===pl.c&&st==='play')doFail();},140);
+      }
+    },cf.spd));
+  });
+
+  mq=[];ani=false;genDeco();
+  t0=performance.now();el=0;
+}
+
+/* ================ PLAYER MOVE ================ */
+function mv(dir){
+  if(st!=='play'||ani)return;
+  const cf=cfg(lv);const cell=mz[pl.r][pl.c];
+  let nr=pl.r,nc=pl.c;
+  if(dir==='up'&&!cell.t)nr--;
+  else if(dir==='down'&&!cell.b)nr++;
+  else if(dir==='left'&&!cell.l)nc--;
+  else if(dir==='right'&&!cell.r)nc++;
+  else return;
+  if(nr<0||nr>=cf.r||nc<0||nc>=cf.c)return;
+
+  ani=true;pl.r=nr;pl.c=nc;
+  const tx=nc*cs,ty=nr*cs,sx=pl.ax,sy=pl.ay;let s0=null;
+  (function step(ts){
+    if(!s0)s0=ts;const p=Math.min((ts-s0)/80,1);const e=1-(1-p)*(1-p);
+    pl.ax=sx+(tx-sx)*e;pl.ay=sy+(ty-sy)*e;
+    if(p<1)requestAnimationFrame(step);
+    else{ani=false;chk();if(mq.length)mv(mq.shift());}
+  })(performance.now());
+}
+
+function chk(){
+  for(const en of ens)if(en.r===pl.r&&en.c===pl.c){doFail();return;}
+  if(pl.r===exR&&pl.c===exC){
+    if(lv>=TL)doWin();
+    else{lv++;showLvl();updHUD();mz=null;setTimeout(initLv,1100);}
+  }
+}
+
+/* ================ DRAW ================ */
+function draw(){
+  if(!mz)return; // Don't draw if maze not ready
+  const cf=cfg(lv);const W=cv.width,H=cv.height;
+  if(W===0||H===0)return;
+  cx.clearRect(0,0,W,H);
+
+  // Background — warm sandy path
+  for(let r=0;r<cf.r;r++)for(let c=0;c<cf.c;c++){
+    const x=c*cs,y=r*cs;
+    cx.fillStyle=(r+c)%2===0?'#f7f2e4':'#f0ebd6';
+    cx.fillRect(x,y,cs,cs);
+    // Subtle path texture dots
+    cx.fillStyle='rgba(180,160,120,0.08)';
+    for(let d=0;d<3;d++){
+      cx.beginPath();
+      cx.arc(x+Math.random()*cs,y+Math.random()*cs,1+Math.random()*1.5,0,Math.PI*2);
+      cx.fill();
+    }
+  }
+
+  // Walls — beautiful hedge with gradient and leaf texture
+  const wt=Math.max(3,Math.floor(cs*0.16));
+  for(let r=0;r<cf.r;r++)for(let c=0;c<cf.c;c++){
+    const x=c*cs,y=r*cs,cell=mz[r][c];
+    if(cell.t)drawHedge(x-1,y-Math.floor(wt/2),cs+2,wt);
+    if(cell.b)drawHedge(x-1,y+cs-Math.floor(wt/2),cs+2,wt);
+    if(cell.l)drawHedge(x-Math.floor(wt/2),y-1,wt,cs+2);
+    if(cell.r)drawHedge(x+cs-Math.floor(wt/2),y-1,wt,cs+2);
+  }
+
+  // Flowers
+  const fSz=Math.max(6,Math.floor(cs*0.28));
+  cx.font=`${fSz}px serif`;cx.textAlign='center';cx.textBaseline='middle';
+  deco.forEach(d=>cx.fillText(d.e,d.c*cs+d.ox*cs,d.r*cs+d.oy*cs));
+
+  // Exit — treasure with animated glow
+  const t=Date.now()/350;
+  const exX=exC*cs,exY=exR*cs;
+  // Outer glow
+  const ga1=.08+.06*Math.sin(t);
+  cx.fillStyle=`rgba(251,191,36,${ga1})`;
+  cx.beginPath();cx.arc(exX+cs/2,exY+cs/2,cs*.65,0,Math.PI*2);cx.fill();
+  // Inner glow
+  cx.fillStyle=`rgba(251,191,36,${ga1*2})`;
+  cx.beginPath();cx.arc(exX+cs/2,exY+cs/2,cs*.4,0,Math.PI*2);cx.fill();
+  // Treasure — white bg circle, gold ring, big emoji
+  cx.fillStyle='#fff';
+  cx.beginPath();cx.arc(exX+cs/2,exY+cs/2,cs*.44,0,Math.PI*2);cx.fill();
+  cx.strokeStyle='#d97706';cx.lineWidth=3;
+  cx.beginPath();cx.arc(exX+cs/2,exY+cs/2,cs*.44,0,Math.PI*2);cx.stroke();
+  cx.font=`${Math.floor(cs*.8)}px serif`;cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillText('💰',exX+cs/2,exY+cs/2);
+
+  // Enemies — Grandpa pirate, FULL CELL SIZE, white bg, no shadow
+  cx.shadowColor='transparent';cx.shadowBlur=0;
+  ens.forEach(en=>{
+    const ex=en.ax,ey=en.ay;
+
+    // Solid white circle background so emoji is crystal clear
+    cx.fillStyle='#fff';
+    cx.beginPath();cx.arc(ex+cs/2,ey+cs/2,cs*.44,0,Math.PI*2);cx.fill();
+
+    // Red ring border
+    cx.strokeStyle='#dc2626';cx.lineWidth=3;
+    cx.beginPath();cx.arc(ex+cs/2,ey+cs/2,cs*.44,0,Math.PI*2);cx.stroke();
+
+    // Grandpa emoji — FILLS the cell
+    cx.font=`${Math.floor(cs*.9)}px serif`;cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText('👴',ex+cs/2,ey+cs/2);
+
+    // Pirate hat on top-right
+    cx.font=`${Math.floor(cs*.4)}px serif`;
+    cx.fillText('🏴‍☠️',ex+cs*.8,ey+cs*.08);
+  });
+
+  // Player — FULL CELL SIZE, white bg, no shadow
+  const px=pl.ax,py=pl.ay;
+
+  // Solid white circle background
+  cx.fillStyle='#fff';
+  cx.beginPath();cx.arc(px+cs/2,py+cs/2,cs*.44,0,Math.PI*2);cx.fill();
+
+  // Blue ring border
+  cx.strokeStyle='#3b82f6';cx.lineWidth=3;
+  cx.beginPath();cx.arc(px+cs/2,py+cs/2,cs*.44,0,Math.PI*2);cx.stroke();
+
+  // Player emoji — FILLS the cell
+  cx.font=`${Math.floor(cs*.9)}px serif`;cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillText(me.e,px+cs/2,py+cs/2);
+}
+
+function drawHedge(x,y,w,h){
+  // Dark green base
+  const g=cx.createLinearGradient(x,y,x,y+h);
+  g.addColorStop(0,'#1a5c1a');g.addColorStop(.4,'#2d7d2d');g.addColorStop(.7,'#236b23');g.addColorStop(1,'#164016');
+  cx.fillStyle=g;
+  cx.beginPath();
+  // Slightly rounded rect
+  const r=Math.min(3,w/3,h/3);
+  cx.moveTo(x+r,y);cx.lineTo(x+w-r,y);cx.quadraticCurveTo(x+w,y,x+w,y+r);
+  cx.lineTo(x+w,y+h-r);cx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  cx.lineTo(x+r,y+h);cx.quadraticCurveTo(x,y+h,x,y+h-r);
+  cx.lineTo(x,y+r);cx.quadraticCurveTo(x,y,x+r,y);
+  cx.closePath();cx.fill();
+
+  // Leaf highlight specks
+  cx.fillStyle='rgba(72,187,72,0.3)';
+  const count=Math.max(1,Math.floor((w*h)/200));
+  for(let i=0;i<count;i++){
+    cx.beginPath();
+    cx.arc(x+2+Math.random()*(w-4),y+2+Math.random()*(h-4),1+Math.random(),0,Math.PI*2);
+    cx.fill();
+  }
+}
+
+/* ================ TIMER ================ */
+function updT(){if(st!=='play')return;
+  el=performance.now()-t0;const s=Math.floor(el/1000);
+  document.getElementById('htm').textContent=`⏱ ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+  tR=requestAnimationFrame(updT);}
+function updHUD(){document.getElementById('hlv').textContent=`שלב ${lv}/${TL}`;}
+
+/* ================ GAME FLOW ================ */
+function go(){show(null);lv=1;updHUD();showLvl();st='play';setTimeout(()=>{initLv();updT();},350);}
+
+function doFail(){
+  st='fail';eT.forEach(t=>clearInterval(t));cancelAnimationFrame(tR);
+  setTimeout(()=>{show('failScr');
+    document.getElementById('fi').textContent=`הגעת לשלב ${lv} מתוך ${TL}`;
+    const s=Math.floor(el/1000);
+    document.getElementById('fs').textContent=`⏱ ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+    document.getElementById('fb').textContent=me.f?'🔄 שחקי שוב':'🔄 שחק שוב';
+  },250);
+}
+
+function doWin(){
+  st='win';eT.forEach(t=>clearInterval(t));cancelAnimationFrame(tR);
+  setTimeout(()=>{show('winScr');
+    const ws=document.getElementById('winScr');
+    ws.style.background=me.f?'linear-gradient(135deg,#4a1942,#8e2d6d,#d4478d)':'linear-gradient(135deg,#0d1b0d,#1a3a1a,#2d5a2d)';
+    document.getElementById('ws').textContent=`${me.e} ${me.l} - ${me.f?'אלופה':'אלוף'} הפיראטים!`;
+    const s=Math.floor(el/1000);
+    document.getElementById('wc').textContent=`⏱ ${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+    document.getElementById('wb').textContent=me.f?'🔄 שחקי שוב':'🔄 שחק שוב';
+    confetti();
+  },250);
+}
+
+function back(){document.querySelectorAll('.conf').forEach(e=>e.remove());
+  show('startScr');st='start';eT.forEach(t=>clearInterval(t));cancelAnimationFrame(tR);}
+
+function confetti(){
+  const cols=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff','#ffaa5c','#ffd700'];
+  for(let i=0;i<100;i++){const p=document.createElement('div');p.className='conf';
+    p.style.left=Math.random()*100+'vw';p.style.background=cols[Math.floor(Math.random()*cols.length)];
+    p.style.animationDuration=(2+Math.random()*3)+'s';p.style.animationDelay=Math.random()*2+'s';
+    p.style.width=(5+Math.random()*10)+'px';p.style.height=(5+Math.random()*10)+'px';
+    p.style.borderRadius=Math.random()>.5?'50%':'2px';
+    document.body.appendChild(p);setTimeout(()=>p.remove(),7000);}
+}
+
+/* ================ INPUT — KEYBOARD ================ */
+document.addEventListener('keydown',e=>{
+  if(st!=='play')return;
+  const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};
+  if(m[e.key]){e.preventDefault();if(ani)mq=[m[e.key]];else mv(m[e.key]);}
+});
+
+/* ================ INPUT — D-PAD (touch + click) ================ */
+document.querySelectorAll('.dpad .d').forEach(b=>{
+  function h(e){e.preventDefault();e.stopPropagation();
+    if(st!=='play')return;const d=b.dataset.d;if(ani)mq=[d];else mv(d);}
+  b.addEventListener('touchstart',h,{passive:false});
+  b.addEventListener('mousedown',h);
+});
+
+/* ================ INPUT — SWIPE (on canvas only) ================ */
+let swX=0,swY=0,swiping=false;
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();swX=e.touches[0].clientX;swY=e.touches[0].clientY;swiping=true;
+},{passive:false});
+cv.addEventListener('touchend',e=>{
+  if(!swiping||st!=='play')return;swiping=false;
+  const dx=e.changedTouches[0].clientX-swX,dy=e.changedTouches[0].clientY-swY;
+  if(Math.abs(dx)<15&&Math.abs(dy)<15)return;
+  let d;if(Math.abs(dx)>Math.abs(dy))d=dx>0?'right':'left';else d=dy>0?'down':'up';
+  if(ani)mq=[d];else mv(d);
+},{passive:true});
+
+/* Prevent page scroll */
+document.addEventListener('touchmove',e=>{if(st==='play')e.preventDefault();},{passive:false});
+
+/* ================ RENDER LOOP ================ */
+(function loop(){draw();requestAnimationFrame(loop);})();
+
+/* ================ RESIZE ================ */
+window.addEventListener('resize',()=>{
+  if(st==='play'){szCV();pl.ax=pl.c*cs;pl.ay=pl.r*cs;
+    ens.forEach(en=>{en.ax=en.c*cs;en.ay=en.r*cs;});genDeco();}
+});
+</script>
+</body>
+</html>
